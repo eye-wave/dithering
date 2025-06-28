@@ -11,17 +11,32 @@ let initialized = false;
  * @returns
  */
 export async function saveCanvasAsImage(gl, name, format = 'png') {
-	if (!initialized) {
-		const module = await fetch(wasmUrl).then((res) => res.arrayBuffer());
-		initSync({ module });
-	}
-
 	const { canvas } = gl;
 	const pixels = new Uint8Array(canvas.width * canvas.height * 4);
 	gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-	const blob = new Blob([export_png(canvas.width, canvas.height, pixels)]);
-	const objectURL = URL.createObjectURL(blob);
+	let objectURL;
+
+	if (format === 'png') {
+		if (!initialized) {
+			const module = await fetch(wasmUrl).then((res) => res.arrayBuffer());
+			initSync({ module });
+		}
+
+		const blob = new Blob([export_png(canvas.width, canvas.height, pixels)]);
+		objectURL = URL.createObjectURL(blob);
+	} else {
+		const offscreen = new OffscreenCanvas(canvas.width, canvas.height);
+		const ctx = offscreen.getContext('2d');
+		if (!ctx) return;
+
+		const pix = new Uint8ClampedArray(pixels.buffer);
+		const img = new ImageData(pix, canvas.width, canvas.height, { colorSpace: 'srgb' });
+		ctx.putImageData(img, 0, 0);
+
+		const blob = await offscreen.convertToBlob({ quality: 1, type: 'image/' + format });
+		objectURL = URL.createObjectURL(blob);
+	}
 
 	const link = document.createElement('a');
 	link.download = `${name}.${format}`;
