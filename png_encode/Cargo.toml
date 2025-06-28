@@ -1,0 +1,24 @@
+cargo-features = ["profile-rustflags", "trim-paths"]
+
+[package]
+name = "png_encode"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+png = "0.17.16"
+wasm-bindgen = "0.2.100"
+web-sys = "0.3.77"
+wee_alloc = "0.4.5"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = "z"
+panic = "abort"
+strip = true
+trim-paths = "all"
+rustflags = ["-Cdebuginfo=0", "-Zthreads=8"]

@@ -16,6 +16,9 @@ jobs:
       - uses: pnpm/action-setup@v2
         with:
           version: 8.5.1
+      - name: Install rust nightly
+        run: rustup install nightly
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:

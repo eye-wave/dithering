@@ -7,6 +7,7 @@
 	import DitheredImage from './DitheredImage.svelte';
 	import DitherOptions from './DitherOptions.svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { glStore } from './ordered';
 
 	/**
 	 * @type {import("svelte").EventDispatcher<{cancel: void}>}
@@ -46,7 +47,7 @@
 	 */
 	async function save(canvas) {
 		if (!canvas) return;
-		await saveCanvasAsImage(canvas, 'dithered', 'png');
+		await saveCanvasAsImage($glStore, 'dithered', 'png');
 	}
 
 	/**
