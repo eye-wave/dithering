@@ -16,8 +16,11 @@ jobs:
       - uses: pnpm/action-setup@v2
         with:
           version: 8.5.1
+
       - name: Install rust nightly
-        run: rustup install nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
@@ -26,10 +29,10 @@ jobs:
           cache: 'pnpm'
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm format && pnpm lint
 
       - name: Build
         run: pnpm build
