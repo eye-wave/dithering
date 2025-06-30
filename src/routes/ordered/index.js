@@ -1,6 +1,7 @@
 import vertex_src from './vertex.glsl';
 import fragment_src from './fragment.glsl';
 import { initShaderProgram, setUpRect, textureFromImageData } from './utils';
+import { derived, writable } from 'svelte/store';
 
 /**
  * @typedef {{
@@ -12,6 +13,10 @@ import { initShaderProgram, setUpRect, textureFromImageData } from './utils';
  *   output_height: number;
  *}} DitheringOptions
  */
+
+/** @type {import("svelte/store").Writable<WebGLRenderingContext>} */
+const __gl_store = writable();
+export const glStore = derived(__gl_store, (g) => g);
 
 /**
  *
@@ -33,6 +38,8 @@ export function orderedDithering(canvas, initialOptions) {
 		alert('WebGL not supported');
 		return;
 	}
+
+	__gl_store.set(gl);
 
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
 	gl.clear(gl.COLOR_BUFFER_BIT);

@@ -1,23 +1,43 @@
+import wasmUrl from '../../png_encode/pkg/png_encode_bg.wasm?url';
+import { initSync, export_png as savePng } from '../../png_encode/pkg/png_encode';
+
+let initialized = false;
+
 /**
  *
- * @param {HTMLCanvasElement} canvas
+ * @param {WebGLRenderingContext} gl
  * @param {string} name
  * @param {"png" | "jpeg" | "webp"} format
  * @returns
  */
-export async function saveCanvasAsImage(canvas, name, format = 'png') {
-	const intermediate = new OffscreenCanvas(canvas.width, canvas.height);
+export async function saveCanvasAsImage(gl, name, format = 'png') {
+	const { canvas } = gl;
+	const pixels = new Uint8Array(canvas.width * canvas.height * 4);
+	gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-	const ctx = intermediate.getContext('2d');
-	if (!ctx) return;
+	flipPixels(pixels, canvas.width, canvas.height);
+	let objectURL;
 
-	ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height);
-	const blob = await intermediate.convertToBlob({
-		type: 'image/' + format,
-		quality: 1
-	});
+	if (format === 'png') {
+		if (!initialized) {
+			const module = await fetch(wasmUrl).then((res) => res.arrayBuffer());
+			initSync({ module });
+		}
 
-	const objectURL = URL.createObjectURL(blob);
+		const blob = new Blob([savePng(canvas.width, canvas.height, pixels)]);
+		objectURL = URL.createObjectURL(blob);
+	} else {
+		const offscreen = new OffscreenCanvas(canvas.width, canvas.height);
+		const ctx = offscreen.getContext('2d');
+		if (!ctx) return;
+
+		const pix = new Uint8ClampedArray(pixels.buffer);
+		const img = new ImageData(pix, canvas.width, canvas.height, { colorSpace: 'srgb' });
+		ctx.putImageData(img, 0, 0);
+
+		const blob = await offscreen.convertToBlob({ quality: 1, type: 'image/' + format });
+		objectURL = URL.createObjectURL(blob);
+	}
 
 	const link = document.createElement('a');
 	link.download = `${name}.${format}`;
@@ -26,6 +46,24 @@ export async function saveCanvasAsImage(canvas, name, format = 'png') {
 	link.remove();
 
 	URL.revokeObjectURL(objectURL);
+}
+
+/**
+ * @param {Uint8Array} data
+ * @param {number} width
+ * @param {number} height
+ */
+export function flipPixels(data, width, height) {
+	const rowSize = width * 4;
+	for (let y = 0; y < height / 2; y++) {
+		const topOffset = y * rowSize;
+		const bottomOffset = (height - 1 - y) * rowSize;
+		for (let x = 0; x < rowSize; x++) {
+			const tmp = data[topOffset + x];
+			data[topOffset + x] = data[bottomOffset + x];
+			data[bottomOffset + x] = tmp;
+		}
+	}
 }
 
 /**
@@ -120,7 +158,7 @@ export function hexToRGB(hex) {
  * @returns  {HSL}
  */
 export function rgbToHsl([r, g, b]) {
-	(r /= 255), (g /= 255), (b /= 255);
+	((r /= 255), (g /= 255), (b /= 255));
 	var max = Math.max(r, g, b),
 		min = Math.min(r, g, b);
 
